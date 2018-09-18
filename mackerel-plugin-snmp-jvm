@@ -1,0 +1,89 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+from __future__ import print_function
+import argparse
+import logging
+import subprocess
+import time
+import json
+import os
+import sys
+
+logging.basicConfig(level=logging.INFO)
+
+
+def print_mackerel_graph_definition(args):
+    print('# mackerel-agent-plugin')
+    meta = {
+        'graphs': {
+            args.metric_key_prefix + '.heap': {
+                'unit': 'bytes',
+                'label': 'custom.' + args.metric_key_prefix + '.heap.*',
+                'metrics': [{
+                    'name': '*',
+                    'label': '%1',
+                }],
+            },
+            args.metric_key_prefix + '.non-heap': {
+                'unit': 'bytes',
+                'label': 'custom.' + args.metric_key_prefix + '.non-heap.*',
+                'metrics': [{
+                    'name': '*',
+                    'label': '%1',
+                }],
+            },
+        },
+    }
+    print(json.dumps(meta))
+
+
+def print_mackerel_plugin_snmp(args):
+    host = args.host
+    community = args.community
+    metric_key_prefix = args.metric_key_prefix
+    subprocess.call(["/usr/bin/mackerel-plugin-snmp", "-name", metric_key_prefix + ".gc_count",
+        "-host", host, "-community", community,
+        "1.3.6.1.4.1.42.2.145.3.163.1.1.2.101.1.2.2:ygc:1:0",
+        "1.3.6.1.4.1.42.2.145.3.163.1.1.2.101.1.2.3:fgc:1:0"])
+    subprocess.call(["/usr/bin/mackerel-plugin-snmp", "-name", metric_key_prefix + ".gc_time",
+        "-host", host, "-community", community, "-tempfile",
+        "/var/tmp/mackerel-agent/mackerel-plugin-snmp2",
+        "1.3.6.1.4.1.42.2.145.3.163.1.1.2.101.1.3.2:ygct:1:0",
+        "1.3.6.1.4.1.42.2.145.3.163.1.1.2.101.1.3.3:fgct:1:0"])
+    subprocess.call(["/usr/bin/mackerel-plugin-snmp", "-name", metric_key_prefix + ".thread",
+        "-host", host, "-community", community,
+        "1.3.6.1.4.1.42.2.145.3.163.1.1.3.1.0:count:0:0"])
+    subprocess.call(["/usr/bin/mackerel-plugin-snmp", "-name", metric_key_prefix + ".heap",
+        "-host", host, "-community", community,
+        "1.3.6.1.4.1.42.2.145.3.163.1.1.2.11.0:used:0:0",
+        "1.3.6.1.4.1.42.2.145.3.163.1.1.2.12.0:committed:0:0",
+        "1.3.6.1.4.1.42.2.145.3.163.1.1.2.13.0:maxsize:0:0"])
+    subprocess.call(["/usr/bin/mackerel-plugin-snmp", "-name", metric_key_prefix + ".non-heap",
+        "-host", host, "-community", community,
+        "1.3.6.1.4.1.42.2.145.3.163.1.1.2.21.0:used:0:0",
+        "1.3.6.1.4.1.42.2.145.3.163.1.1.2.22.0:committed:0:0",
+        "1.3.6.1.4.1.42.2.145.3.163.1.1.2.23.0:maxsize:0:0"])
+
+
+def main():
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--host',
+                        default='localhost', action='store')
+    parser.add_argument('-c', '--community',
+                        default='public', action='store')
+    parser.add_argument('-m', '--metric-key-prefix',
+                        default='jvm', action='store')
+    args = parser.parse_args()
+
+    if os.environ.get('MACKEREL_AGENT_PLUGIN_META') == '1':
+        print_mackerel_graph_definition(args)
+        sys.exit(0)
+
+    print_mackerel_plugin_snmp(args)
+
+
+if __name__ == '__main__':
+    main()
+
