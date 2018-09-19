@@ -42,13 +42,16 @@ def print_mackerel_plugin_snmp(args):
     host = args.host
     community = args.community
     metric_key_prefix = args.metric_key_prefix
+    mackerel_tmpdir = "/var/tmp/mackerel-agent"
+    if not os.path.isdir(mackerel_tmpdir):
+        os.makedirs(mackerel_tmpdir)
     subprocess.call(["/usr/bin/mackerel-plugin-snmp", "-name", metric_key_prefix + ".gc_count",
         "-host", host, "-community", community,
         "1.3.6.1.4.1.42.2.145.3.163.1.1.2.101.1.2.2:ygc:1:0",
         "1.3.6.1.4.1.42.2.145.3.163.1.1.2.101.1.2.3:fgc:1:0"])
     subprocess.call(["/usr/bin/mackerel-plugin-snmp", "-name", metric_key_prefix + ".gc_time",
         "-host", host, "-community", community, "-tempfile",
-        "/var/tmp/mackerel-agent/mackerel-plugin-snmp2",
+        mackerel_tmpdir + "/mackerel-plugin-snmp2",
         "1.3.6.1.4.1.42.2.145.3.163.1.1.2.101.1.3.2:ygct:1:0",
         "1.3.6.1.4.1.42.2.145.3.163.1.1.2.101.1.3.3:fgct:1:0"])
     subprocess.call(["/usr/bin/mackerel-plugin-snmp", "-name", metric_key_prefix + ".thread",
